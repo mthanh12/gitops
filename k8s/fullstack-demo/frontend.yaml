@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-html
+  namespace: demo
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Fullstack Demo</title>
+        <style>
+          body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #172033;
+          }
+
+          main {
+            width: min(720px, calc(100% - 32px));
+            padding: 32px;
+            border: 1px solid #d8e0ea;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 14px 40px rgba(25, 38, 62, 0.10);
+          }
+
+          h1 {
+            margin: 0 0 12px;
+            font-size: 32px;
+          }
+
+          p {
+            line-height: 1.6;
+          }
+
+          code {
+            padding: 3px 6px;
+            border-radius: 4px;
+            background: #eef2f7;
+          }
+        </style>
+      </head>
+      <body>
+        <main>
+          <h1>Fullstack Demo</h1>
+          <p>Frontend is running from Kubernetes YAML and ArgoCD.</p>
+          <p>Backend service is available inside the cluster at <code>http://backend.demo.svc.cluster.local/health.json</code>.</p>
+          <p>Use port-forward to open the backend from Windows: <code>kubectl -n demo port-forward svc/backend 9000:80</code>.</p>
+        </main>
+      </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: demo
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: nginx:1.27
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: frontend-html
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: frontend-html
+          configMap:
+            name: frontend-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: demo
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
