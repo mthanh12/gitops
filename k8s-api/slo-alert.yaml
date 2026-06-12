@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: api-success-rate
+  namespace: demo
+spec:
+  metrics:
+    - name: success-rate
+      interval: 15s
+      count: 3
+      failureLimit: 1
+      successCondition: result[0] >= 0.95
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            (
+              sum(rate(flask_http_request_total{namespace="demo", service="api", status!~"5.."}[1m]))
+              /
+              sum(rate(flask_http_request_total{namespace="demo", service="api"}[1m]))
+            ) or vector(1)
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api-slo
+  namespace: demo
+  labels:
+    app: api
+spec:
+  groups:
+    - name: api.slo
+      rules:
+        - alert: ApiHighErrorRate
+          expr: |
+            (
+              sum(rate(flask_http_request_total{namespace="demo", service="api", status=~"5.."}[2m]))
+              /
+              sum(rate(flask_http_request_total{namespace="demo", service="api"}[2m]))
+            ) > 0.05
+          for: 1m
+          labels:
+            severity: warning
+            service: api
+          annotations:
+            summary: "api error rate is above SLO"
+            description: "More than 5% of api requests in namespace demo are returning 5xx for 1 minute."

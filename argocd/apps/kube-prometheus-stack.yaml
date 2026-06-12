@@ -14,6 +14,16 @@ spec:
         prometheus:
           prometheusSpec:
             serviceMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            ruleNamespaceSelector: {}
+            serviceMonitorNamespaceSelector: {}
+        alertmanager:
+          enabled: true
+          alertmanagerSpec:
+            configSecret: alertmanager-email-config
+            alertmanagerConfigSelectorNilUsesHelmValues: false
+            alertmanagerConfigSelector: {}
+            alertmanagerConfigNamespaceSelector: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
